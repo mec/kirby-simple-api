@@ -1,52 +1,74 @@
 <?php
 
-  kirby()->set('route', array(
-        'pattern' => 'api/menu',
-        'action'  => function() {
-            return response::json(site()->pages()->visible()->toJson());
-        }
-  ));
+  function imagesForPage($page) {
 
+    // hold the image objs we make
+    $imageObjs = [];
+    // get the images
+    $images = $page->images()->sortBy('sort');
+
+    // add the images
+    foreach ($images as $key => $image) {
+      // change each image into json
+      $jsonImage = $image->toJson();
+      // decode the json to a php object
+      $imageObj = json_decode($jsonImage);
+      // add the image object to the images array
+      $imageObjs['originals'][] = $imageObj;
+      // make a thumb form the image
+      $thumbImage = thumb($image, array('width' => 600, 'crop' => true));
+      // turn the thumb into json and back to a php object
+      $thumbObj = json_decode($thumbImage->toJson());
+      // add the thumb to the images array
+      $imageObjs['thumbnails'][] = $thumbObj;
+    }
+
+    return $imageObjs;
+  }
+
+  function childrenForPage($page) {
+    // hold the child object we make
+    $childrenObjs = [];
+
+    // get the child pages
+    $children = $page->children();
+
+    foreach ($children as $key => $child) {
+      // change each image into json
+      $jsonChild = $child->toJson();
+      // decode the json to a php object
+      $childObj = json_decode($jsonChild);
+
+      // add any images
+      $childObj->images = imagesForPage($child);
+
+      // add the image object to the images array
+      $childrenObjs[] = $childObj;
+    }
+    return $childrenObjs;
+
+  }
   kirby()->set('route', array(
-        'pattern' => 'api/home',
-        'action'  => function() {
-            if ( site()->homePage() ) {
-              return response::json(site()->homePage()->toJson());
+        'pattern' => 'api/(:all)',
+        'action'  => function($path) {
+            if (site()->pages()->find($path)) {
+              // get the page
+              $page = site()->pages()->find($path);
+              // decode the json to php obj
+              $pageObj = json_decode($page->toJson());
+
+              // add images if there are any
+              $pageObj->images = imagesForPage($page);
+
+              // add children if any
+              $pageObj->children = childrenForPage($page);
+
+              // encode back to json
+              $result = json_encode($pageObj);
+              return response::json($result);
             } else {
               return response::error($message = '404 Not found', $code = 404, $data = array($section));
             }
         }
-  ));
 
-  kirby()->set('route', array(
-        'pattern' => 'api/(:any)',
-        'action'  => function($page) {
-            if ( site()->pages()->find($page) ) {
-              return response::json(site()->page($page)->toJson());
-            } else {
-              return response::error($message = '404 Not found', $code = 404, $data = array($page));
-            }
-        }
-  ));
-
-  kirby()->set('route', array(
-        'pattern' => 'api/(:any)/children',
-        'action'  => function($page) {
-            if ( site()->pages($page) && site()->pages($page)->children()->visible() ) {
-              return response::json(site()->page($page)->children()->visible()->toJson());
-            } else {
-              return response::error($message = '404 Not found', $code = 404, $data = array($page));
-            }
-        }
-  ));
-
-  kirby()->set('route', array(
-        'pattern' => 'api/(:any)/(:any)',
-        'action'  => function($section, $page) {
-            if ( site()->page($section)->children()->find($page) ) {
-              return response::json(site()->page($section)->children()->find($page)->toJson());
-            } else {
-              return response::error($message = '404 Not found', $code = 404, $data = array($section, $page));
-            }
-        }
   ));
