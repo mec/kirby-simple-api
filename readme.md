@@ -15,7 +15,7 @@ Copy the kirby-simple-api folder to your site > plugins folder
 ## Advanced Branch
 Built a more advanced version that is on the 'advanced' branch. This ones bundles up all the page, children and images in a single json file:
 
-- /%page%
+- /api/%page%
 
 ## Read more
 https://medium.com/@mecrawlings/decoupled-kirby-d22416f567e9
